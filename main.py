@@ -1,7 +1,9 @@
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
-import os
+from flask import Flask
+import threading, os
 
+# --- Telegram ---
 api_id = int(os.getenv("API_ID"))
 api_hash = os.getenv("API_HASH")
 target_chat = int(os.getenv("TARGET_CHAT"))
@@ -14,6 +16,20 @@ client = TelegramClient(StringSession(session_str), api_id, api_hash)
 async def handler(event):
     await event.forward_to(target_chat)
 
-print("✅ Userbot запущен и ждёт сообщения...")
-client.start()
-client.run_until_disconnected()
+# --- Flask ---
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "✅ Bot is running!"
+
+def run_flask():
+    port = int(os.getenv("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
+
+# --- Run everything ---
+if __name__ == "__main__":
+    threading.Thread(target=run_flask).start()
+    print("✅ Userbot запущен и ждёт сообщения...")
+    client.start()
+    client.run_until_disconnected()
