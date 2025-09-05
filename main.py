@@ -14,9 +14,7 @@ client = TelegramClient(StringSession(session_str), api_id, api_hash)
 
 @client.on(events.NewMessage(from_users=bot_username))
 async def handler(event):
-    text = event.raw_text.lower()
-    if "оплатил покупку" in text or "подтвердил получение товара" in text:
-        await event.forward_to(target_chat)
+    await event.forward_to(target_chat)
 
 # --- Flask ---
 app = Flask(__name__)
