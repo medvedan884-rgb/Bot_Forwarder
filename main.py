@@ -6,19 +6,20 @@ import threading, os
 # --- Telegram ---
 api_id = int(os.getenv("API_ID"))
 api_hash = os.getenv("API_HASH")
-bot_username = os.getenv("BOT_USERNAME")
+bot_username = os.getenv("BOT_USERNAME")   # от кого слушаем
 session_str = os.getenv("SESSION_STRING")
+forum_chat = int(os.getenv("FORUM_CHAT"))  # общий chat_id форума
 
-# Чаты для пересылки
-CHAT_PAYMENT = int(os.getenv("CHAT_PAYMENT"))       # для "оплатил покупку"
-CHAT_CONFIRM = int(os.getenv("CHAT_CONFIRM"))       # для "подтвердил получение товара"
-CHAT_INBOX = int(os.getenv("CHAT_INBOX"))           # для "новое сообщение от пользователя"
+# Темы (topic_id) в форуме
+TOPIC_PAYMENT = int(os.getenv("TOPIC_PAYMENT"))     # тема "оплатил покупку"
+TOPIC_CONFIRM = int(os.getenv("TOPIC_CONFIRM"))     # тема "подтвердил получение товара"
+TOPIC_INBOX = int(os.getenv("TOPIC_INBOX"))         # тема "новое сообщение от пользователя"
 
-# Словарь правил (ключ — фраза, значение — чат)
+# Словарь правил
 FORWARD_RULES = {
-    "оплатил покупку": CHAT_PAYMENT,
-    "подтвердил получение товара": CHAT_CONFIRM,
-    "новое сообщение от пользователя": CHAT_INBOX
+    "оплатил покупку": TOPIC_PAYMENT,
+    "подтвердил получение товара": TOPIC_CONFIRM,
+    "новое сообщение от пользователя": TOPIC_INBOX
 }
 
 client = TelegramClient(StringSession(session_str), api_id, api_hash)
@@ -28,13 +29,17 @@ async def handler(event):
     text = event.raw_text.lower()
     print(f"📩 Получено сообщение: {text}")
 
-    for phrase, chat_id in FORWARD_RULES.items():
+    for phrase, topic_id in FORWARD_RULES.items():
         if phrase in text:
-            await event.forward_to(chat_id)
-            print(f"➡️ Переслано в чат {chat_id} (по фразе: {phrase})")
-            break   # чтобы не сработало несколько раз
+            await client.send_message(
+                forum_chat,
+                event.raw_text,      # текст сообщения
+                reply_to=topic_id    # указываем тему
+            )
+            print(f"➡️ Переслано в тему {topic_id} (по фразе: {phrase})")
+            break
 
-# --- Flask ---
+# --- Flask (чтобы Render не засыпал) ---
 app = Flask(__name__)
 
 @app.route("/")
@@ -45,10 +50,10 @@ def run_flask():
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# --- Run everything ---
+# --- Run ---
 if __name__ == "__main__":
     threading.Thread(target=run_flask).start()
-    print("✅ Userbot запущен и ждёт сообщения...")
+    print(f"✅ Userbot запущен и ждёт сообщения от @{bot_username}...")
     while True:
         try:
             client.start()
